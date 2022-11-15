@@ -11,5 +11,9 @@ class PostAdmin(admin.ModelAdmin):
     empty_value_display = '-пусто-'
 
 
-admin.site.register(Post, PostAdmin)
+@admin.register(Post)
+class PostAdmin(admin.ModelAdmin):
+    pass
+
+
 admin.site.register(Group)
