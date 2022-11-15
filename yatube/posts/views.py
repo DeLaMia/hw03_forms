@@ -1,18 +1,16 @@
-from django.core.paginator import Paginator
-from django.shortcuts import render, get_object_or_404
-from .models import Post, Group, User
-from .forms import PostForm
-from django.shortcuts import redirect
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
 
+from .forms import PostForm
+from .models import Group, Post, User
+from .utils import paginator_create
 
 LAST_10_POSTS: int = 10
 
 
 def index(request):
     post_list = Post.objects.all()
-    paginator = Paginator(post_list, LAST_10_POSTS)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    page_obj = paginator_create(request, post_list, LAST_10_POSTS)
     context = {
         'page_obj': page_obj,
     }
@@ -22,9 +20,7 @@ def index(request):
 def group_posts(request, slug):
     group = get_object_or_404(Group, slug=slug)
     post_list = group.posts.all()
-    paginator = Paginator(post_list, LAST_10_POSTS)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    page_obj = paginator_create(request, post_list, LAST_10_POSTS)
     context = {
         'group': group,
         'page_obj': page_obj,
@@ -34,10 +30,8 @@ def group_posts(request, slug):
 
 def profile(request, username):
     author = get_object_or_404(User, username=username)
-    post_list = Post.objects.filter(author=author)
-    paginator = Paginator(post_list, LAST_10_POSTS)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    post_list = author.posts.all()
+    page_obj = paginator_create(request, post_list, LAST_10_POSTS)
     post_count = post_list.count()
     context = {
         'author': author,
@@ -48,8 +42,8 @@ def profile(request, username):
 
 
 def post_detail(request, post_id):
-    post_more = Post.objects.get(pk=post_id)
-    post_count = (post_more.author).posts.count()
+    post_more = get_object_or_404(Post, pk=post_id)
+    post_count = post_more.author.posts.count()
     context = {
         'post_more': post_more,
         'post_count': post_count,
@@ -57,6 +51,7 @@ def post_detail(request, post_id):
     return render(request, 'posts/post_detail.html', context)
 
 
+@login_required
 def post_create(request):
     if request.method == 'POST':
         form = PostForm(request.POST)
@@ -70,6 +65,7 @@ def post_create(request):
     return render(request, 'posts/post_create.html', {'form': form})
 
 
+@login_required
 def post_edit(request, post_id):
     post = get_object_or_404(Post, id=post_id)
     form = PostForm(request.POST or None, instance=post)
